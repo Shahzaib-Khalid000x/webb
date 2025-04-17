@@ -1,7 +1,6 @@
 from datetime import date
 from flask import Flask, abort, render_template, redirect, url_for, flash
 from flask_ckeditor import CKEditor
-# from flask_gravatar import Gravatar
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user,login_required
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
@@ -9,6 +8,8 @@ from sqlalchemy import Integer, String, Text, ForeignKey
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 import bleach
+from dotenv import load_dotenv
+import os
 
 
 # Import your forms from the forms.py
@@ -17,8 +18,9 @@ from forms import RegisterForm
 from forms import LoginForm
 from forms import CommentForm
 
+
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
 ckeditor = CKEditor(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -46,7 +48,7 @@ def author_only(f):
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI", "sqlite:///posts.db")
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
@@ -132,7 +134,6 @@ def login():
             login_user(user)
             return redirect(url_for('get_all_posts'))
         else:
-            print(form.errors)
             flash("Incorrect email or password")
             return redirect(url_for('login'))
     return render_template("login.html" , form=form)
@@ -190,7 +191,7 @@ def add_new_post():
 @app.route("/edit/<int:post_id>", methods=["GET", "POST"])
 @author_only
 def edit_post(post_id):
-    post = BlogPost.query.get(post_id)
+    post = db.session.get(BlogPost, post_id)
     edit_form = CreatePostForm(
         title=post.title,
         subtitle=post.subtitle,
@@ -233,4 +234,5 @@ def contact():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5002)
+    app.run(debug=False, port=5002)
+
